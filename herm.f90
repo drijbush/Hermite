@@ -5,7 +5,7 @@ Program hermite_test
   
   Implicit None
 
-  Integer, Parameter :: l_max = 5
+  Integer, Parameter :: l_max = 10
 
   Type( hgauss_coeffs ) :: HEij
   

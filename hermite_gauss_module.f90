@@ -187,14 +187,14 @@ Contains
        End Do
 
        ! OK All j = 0 values filled in. Now can fill in the rest
-       If( L_max - l1 >= 1 ) Then
+       If( l2 >= 1 ) Then
           Eij%coeffs( 0 )%j_data( 1 )%i_data( 0 ) = + qxq_over_a2 * Eij%coeffs( 0 )%j_data( 0 )%i_data( 0 )
           Eij%coeffs( 1 )%j_data( 1 )%i_data( 0 ) =          pfac * Eij%coeffs( 0 )%j_data( 0 )%i_data( 0 )
        End If
 
-       If( L_max - l1 >= 2 ) Then
+       If( L_max >= 2 ) Then
           L = 2
-          Do jp1 = 1, l2
+          Do jp1 = Max( 1, L - 1 - l1 + 1 ), Min( L, l2 )
              j = jp1 - 1
              i = L - 1 - j
              Eij%coeffs( 0 )%j_data( jp1 )%i_data( i ) = + qxq_over_a2 * Eij%coeffs( 0 )%j_data( j )%i_data( i ) + &
@@ -202,6 +202,36 @@ Contains
              Eij%coeffs( 1 )%j_data( jp1 )%i_data( i ) =          pfac * Eij%coeffs( 0 )%j_data( j )%i_data( i ) + &
                                                            qxq_over_a2 * Eij%coeffs( 1 )%j_data( j )%i_data( i )
              Eij%coeffs( 2 )%j_data( jp1 )%i_data( i ) =          pfac * Eij%coeffs( 1 )%j_data( j )%i_data( i )
+          End Do
+       End If
+
+       If( L_max >= 3 ) Then
+          Do L = 3, L_max
+             Do jp1 = Max( 1, L - 1 - l1 + 1 ), Min( L, l2 )
+
+                j = jp1 - 1
+                i = L - 1 - j
+
+                t = 0
+                Eij%coeffs( t )%j_data( jp1 )%i_data( i ) = + qxq_over_a2 * Eij%coeffs( t     )%j_data( j )%i_data( i ) + &
+                                                                            Eij%coeffs( t + 1 )%j_data( j )%i_data( i )
+
+                t_fac = 1.0_wp
+                Do t = 1, L - 2
+                   t_fac = t_fac + 1.0_wp
+                   Eij%coeffs( t )%j_data( jp1 )%i_data( i ) =         pfac * Eij%coeffs( t - 1 )%j_data( j )%i_data( i ) + &
+                                                                qxq_over_a2 * Eij%coeffs( t     )%j_data( j )%i_data( i ) + &
+                                                                      t_fac * Eij%coeffs( t + 1 )%j_data( j )%i_data( i )
+                End Do
+
+                t = L - 1
+                Eij%coeffs( t )%j_data( jp1 )%i_data( i ) =        pfac * Eij%coeffs( t - 1 )%j_data( j )%i_data( i ) + &
+                                                            qxq_over_a2 * Eij%coeffs( t     )%j_data( j )%i_data( i )
+                
+                t = L
+                Eij%coeffs( t )%j_data( jp1 )%i_data( i ) =          pfac * Eij%coeffs( t - 1 )%j_data( j )%i_data( i )
+                
+             End Do
           End Do
        End If
 
