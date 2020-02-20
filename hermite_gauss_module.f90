@@ -229,7 +229,7 @@ Contains
                                                             qxq_over_a2 * Eij%coeffs( t     )%j_data( j )%i_data( i )
                 
                 t = L
-                Eij%coeffs( t )%j_data( jp1 )%i_data( i ) =          pfac * Eij%coeffs( t - 1 )%j_data( j )%i_data( i )
+                Eij%coeffs( t )%j_data( jp1 )%i_data( i ) = pfac * Eij%coeffs( t - 1 )%j_data( j )%i_data( i )
                 
              End Do
           End Do
