@@ -27,9 +27,6 @@ Module hgauss_module
 
   Private
 
-  ! Stupidly large value of L for buffers
-  Integer, Parameter, Private :: L_absolute_max = 2000
-
 Contains
 
   Pure Subroutine hgauss_alloc( Eij, L_max, do_init_with_NaNs )
@@ -80,7 +77,7 @@ Contains
 
   End Subroutine hgauss_alloc
 
-  Subroutine hgauss_calc_coeffs( Eij, l1, l2, a1, a2, x1, x2 )
+  Pure Subroutine hgauss_calc_coeffs( Eij, l1, l2, a1, a2, x12 )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -89,8 +86,7 @@ Contains
     Integer               , Intent( In    ) :: l2
     Real( wp )            , Intent( In    ) :: a1
     Real( wp )            , Intent( In    ) :: a2
-    Real( wp )            , Intent( In    ) :: x1
-    Real( wp )            , Intent( In    ) :: x2
+    Real( wp )            , Intent( In    ) :: x12
 
     Real( wp ) :: p, q
     Real( wp ) :: xq
@@ -106,7 +102,7 @@ Contains
     p = a1 + a2
     q = a1 * a2 / ( a1 + a2 )
 
-    xq = x1 - x2
+    xq = x12
     Kab = Exp( - q * xq * xq )
 
     L_max = l1 + l2
@@ -245,6 +241,9 @@ Contains
     Real( wp )            , Intent( In ) :: x1
     Real( wp )            , Intent( In ) :: x2
     Real( wp )            , Intent( In ) :: x
+
+    ! Stupidly large value of L for buffers
+    Integer, Parameter :: L_absolute_max = 2000
 
     Real( wp ), Dimension( 0:L_absolute_max ) :: Hermite
     Real( wp ), Dimension( 0:L_absolute_max ) :: Hermite_prime
