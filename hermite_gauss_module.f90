@@ -81,6 +81,8 @@ Contains
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
+    Implicit None
+
     Class( hgauss_coeffs ), Intent( InOut )           :: Eij
     Integer               , Intent( In    )           :: l1
     Integer               , Intent( In    )           :: l2
@@ -120,6 +122,13 @@ Contains
     Angular_momentum: Select Case( L_max )
     Case( 0 )
        ! Already dealt with
+    Case( 1 )
+       Select Case( l1 )
+       Case( 0 )
+          Call hgauss_calc_coeffs_0_1( a1, a2, xq, Eij )
+       Case( 1 )
+          Call hgauss_calc_coeffs_1_0( a1, a2, xq, Eij )
+       End Select
     Case Default
        Call hgauss_calc_coeffs_default( l1, l2, a1, a2, xq, Eij )
     End Select Angular_momentum
@@ -136,9 +145,67 @@ Contains
 
   Contains
 
+    Pure Subroutine hgauss_calc_coeffs_0_1( a1, a2, xq, Eij )
+
+      Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+      Implicit None
+
+      Real( wp )            , Intent( In    ) :: a1
+      Real( wp )            , Intent( In    ) :: a2
+      Real( wp )            , Intent( In    ) :: xq
+      Class( hgauss_coeffs ), Intent( InOut ) :: Eij
+
+      Real( wp ) :: p, q
+      Real( wp ) :: pfac, qxq
+      Real( wp ) :: qxq_over_a2
+
+      p = a1 + a2
+      q = a1 * a2 / ( a1 + a2 )
+
+      pfac = 0.5_wp / p
+
+      qxq  = q * xq
+      qxq_over_a2 = qxq / a2
+
+      Eij%coeffs( 0, 1 )%t_data( 0 ) = + qxq_over_a2 * Eij%coeffs( 0, 0 )%t_data( 0 )
+      Eij%coeffs( 0, 1 )%t_data( 1 ) =          pfac * Eij%coeffs( 0, 0 )%t_data( 0 )
+
+    End Subroutine hgauss_calc_coeffs_0_1
+
+    Pure Subroutine hgauss_calc_coeffs_1_0( a1, a2, xq, Eij )
+
+      Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+      Implicit None
+
+      Real( wp )            , Intent( In    ) :: a1
+      Real( wp )            , Intent( In    ) :: a2
+      Real( wp )            , Intent( In    ) :: xq
+      Class( hgauss_coeffs ), Intent( InOut ) :: Eij
+
+      Real( wp ) :: p, q
+      Real( wp ) :: pfac, qxq
+      Real( wp ) :: qxq_over_a1
+
+      p = a1 + a2
+      q = a1 * a2 / ( a1 + a2 )
+
+      pfac = 0.5_wp / p
+
+      qxq  = q * xq
+      qxq_over_a1 = qxq / a1
+
+      Eij%coeffs( 1, 0 )%t_data( 0 ) = - qxq_over_a1 * Eij%coeffs( 0, 0 )%t_data( 0 )
+      Eij%coeffs( 1, 0 )%t_data( 1 ) =          pfac * Eij%coeffs( 0, 0 )%t_data( 0 )
+
+    End Subroutine hgauss_calc_coeffs_1_0
+
     Pure Subroutine hgauss_calc_coeffs_default( l1, l2, a1, a2, xq, Eij )
 
       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+      Implicit None
 
       Integer               , Intent( In    ) :: l1
       Integer               , Intent( In    ) :: l2
