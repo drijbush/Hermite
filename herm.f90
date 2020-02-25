@@ -117,7 +117,7 @@ Program hermite_test
 
   Write( *, * ) 'Method 4'
   Call HEij%allocate( l1 + l2, .True. )
-  Call HEij%calc_coeffs( l1, l2, a1, a2, x1 - x2 )
+  Call HEij%calc_coeffs( l1, l2, a1, a2, x1 - x2, .True. )
   L = l1 + l2
   x = -5.0_wp
   max_error = - Huge( max_error )

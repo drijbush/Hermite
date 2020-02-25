@@ -77,35 +77,32 @@ Contains
 
   End Subroutine hgauss_alloc
 
-  Pure Subroutine hgauss_calc_coeffs( Eij, l1, l2, a1, a2, x12 )
+  Pure Subroutine hgauss_calc_coeffs( Eij, l1, l2, a1, a2, x12, do_init_with_NaNs )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
-    Class( hgauss_coeffs ), Intent( InOut ) :: Eij
-    Integer               , Intent( In    ) :: l1
-    Integer               , Intent( In    ) :: l2
-    Real( wp )            , Intent( In    ) :: a1
-    Real( wp )            , Intent( In    ) :: a2
-    Real( wp )            , Intent( In    ) :: x12
+    Class( hgauss_coeffs ), Intent( InOut )           :: Eij
+    Integer               , Intent( In    )           :: l1
+    Integer               , Intent( In    )           :: l2
+    Real( wp )            , Intent( In    )           :: a1
+    Real( wp )            , Intent( In    )           :: a2
+    Real( wp )            , Intent( In    )           :: x12
+    Logical               , Intent( In    ), Optional :: do_init_with_NaNs
 
     Real( wp ) :: p, q
     Real( wp ) :: xq
     Real( wp ) :: Kab
-    Real( wp ) :: pfac, qxq
-    Real( wp ) :: qxq_over_a1, qxq_over_a2
-    Real( wp ) :: t_fac
    
-    Integer :: L_max, L
-    Integer :: i, j, t
-    Integer :: ip1, jp1
+    Integer :: L_max
+    Integer :: li, lj
     
+    L_max = l1 + l2
+
     p = a1 + a2
     q = a1 * a2 / ( a1 + a2 )
 
     xq = x12
     Kab = Exp( - q * xq * xq )
-
-    L_max = l1 + l2
 
     Eij%L1_max = l1
     Eij%L2_max = l2
@@ -118,115 +115,155 @@ Contains
 
     Eij%x12 = xq
     
-    Eij%coeffs( 0, 0 )%t_data( 0 ) = Kab
+    Eij%coeffs( 0, 0 )%t_data( 0 ) = Kab ! L1=0, L2=0 case
 
-    If( L_max > 0 ) Then
-   
-       pfac = 0.5_wp / p
+    Angular_momentum: Select Case( L_max )
+    Case( 0 )
+       ! Already dealt with
+    Case Default
+       Call hgauss_calc_coeffs_default( l1, l2, a1, a2, xq, Eij )
+    End Select Angular_momentum
 
-       qxq  = q * xq
-       qxq_over_a1 = qxq / a1
-       qxq_over_a2 = qxq / a2
-
-       ! Fill in the j = 0 values for all values of i
-       ! First the unusual low vaues of l1 where some terms are zero since thye just don't exist
-       If( l1 >= 1 ) Then
-          Eij%coeffs( 1, 0 )%t_data( 0 ) = - qxq_over_a1 * Eij%coeffs( 0, 0 )%t_data( 0 )
-          Eij%coeffs( 1, 0 )%t_data( 1 ) =          pfac * Eij%coeffs( 0, 0 )%t_data( 0 )
-       End If
-
-       If( l1 >= 2 ) Then
-          Eij%coeffs( 2, 0 )%t_data( 0 ) = - qxq_over_a1 * Eij%coeffs( 1, 0 )%t_data( 0 ) + &
-                                                           Eij%coeffs( 1, 0 )%t_data( 1 ) 
-          Eij%coeffs( 2, 0 )%t_data( 1 ) =          pfac * Eij%coeffs( 1, 0 )%t_data( 0 ) - &
-                                             qxq_over_a1 * Eij%coeffs( 1, 0 )%t_data( 1 )
-
-          Eij%coeffs( 2, 0 )%t_data( 2 ) =          pfac * Eij%coeffs( 1, 0 )%t_data( 1 )
-       End If
-
-       ! Now the more general terms
-       Do L = 3, l1
-
-          ip1 = L
-          i = ip1 - 1
-
-          t_fac = 1.0_wp
-
-          t = 0
-
-          Eij%coeffs( ip1, 0 )%t_data( t ) = - qxq_over_a1 * Eij%coeffs( i, 0 )%t_data( t     ) + &
-                                                     t_fac * Eij%coeffs( i, 0 )%t_data( t + 1 )
-
-          Do t = 1, L - 2
-             t_fac = t_fac + 1.0_wp
-             Eij%coeffs( ip1, 0 )%t_data( t ) =        pfac * Eij%coeffs( i, 0 )%t_data( t - 1 ) - &
-                                                qxq_over_a1 * Eij%coeffs( i, 0 )%t_data( t     ) + &
-                                                      t_fac * Eij%coeffs( i, 0 )%t_data( t + 1 )
-          End Do
-
-          t = L - 1
-          Eij%coeffs( ip1, 0 )%t_data( t ) =         pfac * Eij%coeffs( i, 0 )%t_data( t - 1 ) - &
-                                              qxq_over_a1 * Eij%coeffs( i, 0 )%t_data( t     ) 
-
-          t = L
-          Eij%coeffs( ip1, 0 )%t_data( t ) =        pfac * Eij%coeffs( i, 0 )%t_data( t - 1 )
-          
-       End Do
-
-       ! OK All j = 0 values filled in. Now can fill in the rest
-       If( l2 >= 1 ) Then
-          Eij%coeffs( 0, 1 )%t_data( 0 ) = + qxq_over_a2 * Eij%coeffs( 0, 0 )%t_data( 0 )
-          Eij%coeffs( 0, 1 )%t_data( 1 ) =          pfac * Eij%coeffs( 0, 0 )%t_data( 0 )
-       End If
-
-       If( L_max >= 2 ) Then
-          L = 2
-          Do jp1 = Max( 1, L - 1 - l1 + 1 ), Min( L, l2 )
-             j = jp1 - 1
-             i = L - 1 - j
-             Eij%coeffs( i, jp1 )%t_data( 0 ) = + qxq_over_a2 * Eij%coeffs( i, j )%t_data( 0 ) + &
-                                                                Eij%coeffs( i, j )%t_data( 1 )
-             Eij%coeffs( i, jp1 )%t_data( 1 ) =          pfac * Eij%coeffs( i, j )%t_data( 0 ) + &
-                                                  qxq_over_a2 * Eij%coeffs( i, j )%t_data( 1 )
-             Eij%coeffs( i, jp1 )%t_data( 2 ) =          pfac * Eij%coeffs( i, j )%t_data( 1 )
-          End Do
-       End If
-
-       If( L_max >= 3 ) Then
-          Do L = 3, L_max
-             Do jp1 = Max( 1, L - 1 - l1 + 1 ), Min( L, l2 )
-
-                j = jp1 - 1
-                i = L - 1 - j
-
-                t = 0
-                Eij%coeffs( i, jp1 )%t_data( t ) = + qxq_over_a2 * Eij%coeffs( i, j )%t_data( t     ) + &
-                                                                   Eij%coeffs( i, j )%t_data( t + 1 )
-
-                t_fac = 1.0_wp
-                Do t = 1, L - 2
-                   t_fac = t_fac + 1.0_wp
-                   Eij%coeffs( i, jp1 )%t_data( t ) =        pfac * Eij%coeffs( i, j )%t_data( t - 1 ) + &
-                                                      qxq_over_a2 * Eij%coeffs( i, j )%t_data( t     ) + &
-                                                            t_fac * Eij%coeffs( i, j )%t_data( t + 1 )
-                End Do
-
-                t = L - 1
-                Eij%coeffs( i, jp1 )%t_data( t ) =        pfac * Eij%coeffs( i, j )%t_data( t - 1 ) + &
-                                                   qxq_over_a2 * Eij%coeffs( i, j )%t_data( t     )
-                
-                t = L
-                Eij%coeffs( i, jp1 )%t_data( t ) =        pfac * Eij%coeffs( i, j )%t_data( t - 1 )
-
-                
+    If( Present( do_init_with_NaNs ) ) Then
+       If( do_init_with_NaNs ) Then
+          Do lj = l2 + 1, Ubound( Eij%coeffs, Dim = 2 )
+             Do li = l1 + 1, Ubound( Eij%coeffs, Dim = 1 )
+                Call init_with_NaNs( Eij%coeffs( li, lj )%t_data )
              End Do
           End Do
        End If
-       
     End If
+
+  Contains
+
+    Pure Subroutine hgauss_calc_coeffs_default( l1, l2, a1, a2, xq, Eij )
+
+      Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+      Integer               , Intent( In    ) :: l1
+      Integer               , Intent( In    ) :: l2
+      Real( wp )            , Intent( In    ) :: a1
+      Real( wp )            , Intent( In    ) :: a2
+      Real( wp )            , Intent( In    ) :: xq
+      Class( hgauss_coeffs ), Intent( InOut ) :: Eij
+
+      Real( wp ) :: p, q
+      Real( wp ) :: pfac, qxq
+      Real( wp ) :: qxq_over_a1, qxq_over_a2
+      Real( wp ) :: t_fac
+
+      Integer :: L_max, L
+      Integer :: i, j, t
+      Integer :: ip1, jp1
+
+      L_max = l1 + l2
+
+      p = a1 + a2
+      q = a1 * a2 / ( a1 + a2 )
+
+      pfac = 0.5_wp / p
+
+      qxq  = q * xq
+      qxq_over_a1 = qxq / a1
+      qxq_over_a2 = qxq / a2
+
+      ! Fill in the j = 0 values for all values of i
+      ! First the unusual low vaues of l1 where some terms are zero since they just don't exist
+      If( l1 >= 1 ) Then
+         Eij%coeffs( 1, 0 )%t_data( 0 ) = - qxq_over_a1 * Eij%coeffs( 0, 0 )%t_data( 0 )
+         Eij%coeffs( 1, 0 )%t_data( 1 ) =          pfac * Eij%coeffs( 0, 0 )%t_data( 0 )
+      End If
+
+      If( l1 >= 2 ) Then
+         Eij%coeffs( 2, 0 )%t_data( 0 ) = - qxq_over_a1 * Eij%coeffs( 1, 0 )%t_data( 0 ) + &
+                                                          Eij%coeffs( 1, 0 )%t_data( 1 ) 
+         Eij%coeffs( 2, 0 )%t_data( 1 ) =          pfac * Eij%coeffs( 1, 0 )%t_data( 0 ) - &
+                                            qxq_over_a1 * Eij%coeffs( 1, 0 )%t_data( 1 )
+         Eij%coeffs( 2, 0 )%t_data( 2 ) =          pfac * Eij%coeffs( 1, 0 )%t_data( 1 )
+      End If
+
+      ! Now the more general terms
+      Do L = 3, l1
+
+         ip1 = L
+         i = ip1 - 1
+
+         t_fac = 1.0_wp
+
+         t = 0
+
+         Eij%coeffs( ip1, 0 )%t_data( t ) = - qxq_over_a1 * Eij%coeffs( i, 0 )%t_data( t     ) + &
+                                                    t_fac * Eij%coeffs( i, 0 )%t_data( t + 1 )
+
+         Do t = 1, L - 2
+            t_fac = t_fac + 1.0_wp
+            Eij%coeffs( ip1, 0 )%t_data( t ) =        pfac * Eij%coeffs( i, 0 )%t_data( t - 1 ) - &
+                                               qxq_over_a1 * Eij%coeffs( i, 0 )%t_data( t     ) + &
+                                                     t_fac * Eij%coeffs( i, 0 )%t_data( t + 1 )
+         End Do
+
+         t = L - 1
+         Eij%coeffs( ip1, 0 )%t_data( t ) =         pfac * Eij%coeffs( i, 0 )%t_data( t - 1 ) - &
+                                             qxq_over_a1 * Eij%coeffs( i, 0 )%t_data( t     ) 
+
+         t = L
+         Eij%coeffs( ip1, 0 )%t_data( t ) =        pfac * Eij%coeffs( i, 0 )%t_data( t - 1 )
+
+      End Do
+
+      ! OK All j = 0 values filled in. Now can fill in the rest
+      If( l2 >= 1 ) Then
+         Eij%coeffs( 0, 1 )%t_data( 0 ) = + qxq_over_a2 * Eij%coeffs( 0, 0 )%t_data( 0 )
+         Eij%coeffs( 0, 1 )%t_data( 1 ) =          pfac * Eij%coeffs( 0, 0 )%t_data( 0 )
+      End If
+
+      If( L_max >= 2 ) Then
+         L = 2
+         Do jp1 = Max( 1, L - 1 - l1 + 1 ), Min( L, l2 )
+            j = jp1 - 1
+            i = L - 1 - j
+            Eij%coeffs( i, jp1 )%t_data( 0 ) = + qxq_over_a2 * Eij%coeffs( i, j )%t_data( 0 ) + &
+                                                               Eij%coeffs( i, j )%t_data( 1 )
+            Eij%coeffs( i, jp1 )%t_data( 1 ) =          pfac * Eij%coeffs( i, j )%t_data( 0 ) + &
+                                                 qxq_over_a2 * Eij%coeffs( i, j )%t_data( 1 )
+            Eij%coeffs( i, jp1 )%t_data( 2 ) =          pfac * Eij%coeffs( i, j )%t_data( 1 )
+         End Do
+      End If
+
+      If( L_max >= 3 ) Then
+         Do L = 3, L_max
+            Do jp1 = Max( 1, L - 1 - l1 + 1 ), Min( L, l2 )
+
+               j = jp1 - 1
+               i = L - 1 - j
+
+               t = 0
+               Eij%coeffs( i, jp1 )%t_data( t ) = + qxq_over_a2 * Eij%coeffs( i, j )%t_data( t     ) + &
+                                                                  Eij%coeffs( i, j )%t_data( t + 1 )
+
+               t_fac = 1.0_wp
+               Do t = 1, L - 2
+                  t_fac = t_fac + 1.0_wp
+                  Eij%coeffs( i, jp1 )%t_data( t ) =        pfac * Eij%coeffs( i, j )%t_data( t - 1 ) + &
+                                                     qxq_over_a2 * Eij%coeffs( i, j )%t_data( t     ) + &
+                                                           t_fac * Eij%coeffs( i, j )%t_data( t + 1 )
+               End Do
+
+               t = L - 1
+               Eij%coeffs( i, jp1 )%t_data( t ) =        pfac * Eij%coeffs( i, j )%t_data( t - 1 ) + &
+                                                  qxq_over_a2 * Eij%coeffs( i, j )%t_data( t     )
+
+               t = L
+               Eij%coeffs( i, jp1 )%t_data( t ) =        pfac * Eij%coeffs( i, j )%t_data( t - 1 )
+
+            End Do
+         End Do
+      End If
+
+    End Subroutine hgauss_calc_coeffs_default
     
   End Subroutine hgauss_calc_coeffs
-       
+
   Pure Function hgauss_calc_product( Eij, l1, l2, x1, x2, x ) Result( gp )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
