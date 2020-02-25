@@ -164,10 +164,10 @@ Contains
 
       Implicit None
 
-      Real( wp )            , Intent( In    ) :: a1
-      Real( wp )            , Intent( In    ) :: a2
-      Real( wp )            , Intent( In    ) :: xq
-      Class( hgauss_coeffs ), Intent( InOut ) :: Eij
+      Real( wp )           , Intent( In    ) :: a1
+      Real( wp )           , Intent( In    ) :: a2
+      Real( wp )           , Intent( In    ) :: xq
+      Type( hgauss_coeffs ), Intent( InOut ) :: Eij
 
       Real( wp ) :: p, q
       Real( wp ) :: pfac, qxq
@@ -192,10 +192,10 @@ Contains
 
       Implicit None
 
-      Real( wp )            , Intent( In    ) :: a1
-      Real( wp )            , Intent( In    ) :: a2
-      Real( wp )            , Intent( In    ) :: xq
-      Class( hgauss_coeffs ), Intent( InOut ) :: Eij
+      Real( wp )           , Intent( In    ) :: a1
+      Real( wp )           , Intent( In    ) :: a2
+      Real( wp )           , Intent( In    ) :: xq
+      Type( hgauss_coeffs ), Intent( InOut ) :: Eij
 
       Real( wp ) :: p, q
       Real( wp ) :: pfac, qxq
@@ -220,10 +220,10 @@ Contains
 
       Implicit None
 
-      Real( wp )            , Intent( In    ) :: a1
-      Real( wp )            , Intent( In    ) :: a2
-      Real( wp )            , Intent( In    ) :: xq
-      Class( hgauss_coeffs ), Intent( InOut ) :: Eij
+      Real( wp )           , Intent( In    ) :: a1
+      Real( wp )           , Intent( In    ) :: a2
+      Real( wp )           , Intent( In    ) :: xq
+      Type( hgauss_coeffs ), Intent( InOut ) :: Eij
 
       Real( wp ) :: p, q
       Real( wp ) :: pfac, qxq
@@ -254,10 +254,10 @@ Contains
 
       Implicit None
 
-      Real( wp )            , Intent( In    ) :: a1
-      Real( wp )            , Intent( In    ) :: a2
-      Real( wp )            , Intent( In    ) :: xq
-      Class( hgauss_coeffs ), Intent( InOut ) :: Eij
+      Real( wp )           , Intent( In    ) :: a1
+      Real( wp )           , Intent( In    ) :: a2
+      Real( wp )           , Intent( In    ) :: xq
+      Type( hgauss_coeffs ), Intent( InOut ) :: Eij
 
       Real( wp ) :: p, q
       Real( wp ) :: pfac, qxq
@@ -293,10 +293,10 @@ Contains
 
       Implicit None
 
-      Real( wp )            , Intent( In    ) :: a1
-      Real( wp )            , Intent( In    ) :: a2
-      Real( wp )            , Intent( In    ) :: xq
-      Class( hgauss_coeffs ), Intent( InOut ) :: Eij
+      Real( wp )           , Intent( In    ) :: a1
+      Real( wp )           , Intent( In    ) :: a2
+      Real( wp )           , Intent( In    ) :: xq
+      Type( hgauss_coeffs ), Intent( InOut ) :: Eij
 
       Real( wp ) :: p, q
       Real( wp ) :: pfac, qxq
@@ -327,12 +327,12 @@ Contains
 
       Implicit None
 
-      Integer               , Intent( In    ) :: l1
-      Integer               , Intent( In    ) :: l2
-      Real( wp )            , Intent( In    ) :: a1
-      Real( wp )            , Intent( In    ) :: a2
-      Real( wp )            , Intent( In    ) :: xq
-      Class( hgauss_coeffs ), Intent( InOut ) :: Eij
+      Integer              , Intent( In    ) :: l1
+      Integer              , Intent( In    ) :: l2
+      Real( wp )           , Intent( In    ) :: a1
+      Real( wp )           , Intent( In    ) :: a2
+      Real( wp )           , Intent( In    ) :: xq
+      Type( hgauss_coeffs ), Intent( InOut ) :: Eij
 
       Real( wp ) :: p, q
       Real( wp ) :: pfac, qxq
