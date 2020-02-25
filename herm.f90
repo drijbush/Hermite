@@ -1,13 +1,13 @@
 Program hermite_test
 
-  Use, Intrinsic :: iso_fortran_env, Only : wp => real64
-  Use            :: hgauss_module  , Only : hgauss_coeffs
+  Use, Intrinsic :: iso_fortran_env    , Only : wp => real64
+  Use            :: hgauss_old_module  , Only : hgauss_old_coeffs
   
   Implicit None
 
   Integer, Parameter :: l_max = 10
 
-  Type( hgauss_coeffs ) :: HEij
+  Type( hgauss_old_coeffs ) :: HEij
   
   Real( wp ), Dimension( 0:2 * l_max, 0:2 * l_max, 0: 2 * l_max ) :: Eij
 

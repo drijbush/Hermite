@@ -1,4 +1,4 @@
-Module hgauss_module
+Module hgauss_old_module
 
   ! hermite gaussian module
 
@@ -14,7 +14,7 @@ Module hgauss_module
      Type( array_wrap ), Dimension( : ), Allocatable, Private :: j_data
   End Type array_of_array
 
-  Type, Public :: hgauss_coeffs
+  Type, Public :: hgauss_old_coeffs
      Private
      Integer                                            , Private :: li_max
      Integer                                            , Private :: lj_max
@@ -22,18 +22,18 @@ Module hgauss_module
      Real( wp )            , Dimension( : ), Allocatable, Private :: H
      Real( wp )            , Dimension( : ), Allocatable, Private :: H_prime
    Contains
-     Procedure, Public :: allocate     => hgauss_alloc
-     Procedure, Public :: calc_coeffs  => hgauss_calc_coeffs
-     Procedure, Public :: calc_product => hgauss_calc_product
-  End Type hgauss_coeffs
+     Procedure, Public :: allocate     => hgauss_old_alloc
+     Procedure, Public :: calc_coeffs  => hgauss_old_calc_coeffs
+     Procedure, Public :: calc_product => hgauss_old_calc_product
+  End Type hgauss_old_coeffs
   
   Private
 
 Contains
 
-  Pure Subroutine hgauss_alloc( Eij, li_max, lj_max, init_with_NaNs )
+  Pure Subroutine hgauss_old_alloc( Eij, li_max, lj_max, init_with_NaNs )
     
-    Class( hgauss_coeffs ), Intent( InOut )           :: Eij
+    Class( hgauss_old_coeffs ), Intent( InOut )           :: Eij
     Integer               , Intent( In    )           :: li_max
     Integer               , Intent( In    )           :: lj_max
     Logical               , Intent( In    ), Optional :: init_with_NaNs
@@ -48,7 +48,7 @@ Contains
       Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_support_nan, ieee_signaling_nan, &
            ieee_support_halting, ieee_get_halting_mode, ieee_set_halting_mode,                    &
            ieee_get_flag, ieee_set_flag, ieee_invalid
-      Type( hgauss_coeffs ), Intent(   Out )           :: Eij
+      Type( hgauss_old_coeffs ), Intent(   Out )           :: Eij
       Integer              , Intent( In    )           :: li_max
       Integer              , Intent( In    )           :: lj_max
       Logical              , Intent( In    ), Optional :: init_with_NaNs
@@ -100,13 +100,13 @@ Contains
 
     End Subroutine with_dealloc
     
-  End Subroutine hgauss_alloc
+  End Subroutine hgauss_old_alloc
 
-  Subroutine hgauss_calc_coeffs( Eij, l1, l2, a1, a2, x1, x2 )
+  Subroutine hgauss_old_calc_coeffs( Eij, l1, l2, a1, a2, x1, x2 )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
-    Class( hgauss_coeffs ), Intent( InOut ) :: Eij
+    Class( hgauss_old_coeffs ), Intent( InOut ) :: Eij
     Integer               , Intent( In    ) :: l1
     Integer               , Intent( In    ) :: l2
     Real( wp )            , Intent( In    ) :: a1
@@ -237,15 +237,15 @@ Contains
 
     End If
 
-  End Subroutine hgauss_calc_coeffs
+  End Subroutine hgauss_old_calc_coeffs
 
-  Function hgauss_calc_product( Eij, l1, l2, a1, a2, x1, x2, x ) Result( gp )
+  Function hgauss_old_calc_product( Eij, l1, l2, a1, a2, x1, x2, x ) Result( gp )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
     Real( wp ) :: gp
     
-    Class( hgauss_coeffs ), Intent( InOut ) :: Eij
+    Class( hgauss_old_coeffs ), Intent( InOut ) :: Eij
     Integer               , Intent( In    ) :: l1
     Integer               , Intent( In    ) :: l2
     Real( wp )            , Intent( In    ) :: a1
@@ -280,7 +280,7 @@ Contains
     gp = gp * Exp( - pxxp * pxxp )
     
     
-  End Function hgauss_calc_product
+  End Function hgauss_old_calc_product
 
   Pure Subroutine Hermite_polynomial( x, H, H_prime )
 
@@ -303,4 +303,4 @@ Contains
 
   End Subroutine Hermite_polynomial
   
-End Module hgauss_module
+End Module hgauss_old_module
