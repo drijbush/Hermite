@@ -46,6 +46,7 @@ Program hermite_test
   Write( *, * ) 'Method 1'
   x = -5.0_wp
   max_error = - Huge( max_error )
+  max_rel_error = - Huge( max_rel_error )
   Do While( x <= 5.0_wp )
      xl1 = ( x - x1 ) ** l1
      xl2 = ( x - x2 ) ** l2
@@ -54,7 +55,7 @@ Program hermite_test
      gp = xl1 * xl2 * Kab * Exp( - p * ( x - xp ) * ( x - xp ) )
      error = Abs( g1 * g2 - gp )
      max_error = Max( error, max_error )
-     rel_error = error / Abs( g1 * g2 )
+     rel_error = Merge( error / Abs( g1 * g2 ), 0.0_wp, error > 1e-15_wp )
      max_rel_error = Max( rel_error, max_rel_error )
      Write( *, format ) x, g1, g2, g1 * g2, gp, error, rel_error
      x = x + dx
@@ -66,6 +67,7 @@ Program hermite_test
   Call calc_hermite_expansion_coeffs( l1, l2, a1, a2, x1, x2, Eij )
   x = -5.0_wp
   max_error = - Huge( max_error )
+  max_rel_error = - Huge( max_rel_error )
   Do While( x <= 2.8_wp )
      xl1 = ( x - x1 ) ** l1
      xl2 = ( x - x2 ) ** l2
@@ -80,7 +82,7 @@ Program hermite_test
      gp = gp * Exp( - p * ( x - xp ) * ( x - xp ) )
      error = Abs( g1 * g2 - gp )
      max_error = Max( error, max_error )
-     rel_error = error / Abs( g1 * g2 )
+     rel_error = Merge( error / Abs( g1 * g2 ), 0.0_wp, error > 1e-15_wp )
      max_rel_error = Max( rel_error, max_rel_error )
      Write( *, format ) x, g1, g2, g1 * g2, gp, error, rel_error
      x = x + dx
@@ -95,6 +97,7 @@ Program hermite_test
   L = l1 + l2
   x = -5.0_wp
   max_error = - Huge( max_error )
+  max_rel_error = - Huge( max_rel_error )
   Do While( x <= 5.0_wp )
      xl1 = ( x - x1 ) ** l1
      xl2 = ( x - x2 ) ** l2
@@ -103,7 +106,7 @@ Program hermite_test
      gp = HEij%calc_product( l1, l2, a1, a2, x1, x2, x )
      error = Abs( g1 * g2 - gp )
      max_error = Max( error, max_error )
-     rel_error = error / Abs( g1 * g2 )
+     rel_error = Merge( error / Abs( g1 * g2 ), 0.0_wp, error > 1e-15_wp )
      max_rel_error = Max( rel_error, max_rel_error )
      Write( *, format ) x, g1, g2, g1 * g2, gp, error, rel_error
      x = x + dx
