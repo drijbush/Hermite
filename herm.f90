@@ -2,12 +2,14 @@ Program hermite_test
 
   Use, Intrinsic :: iso_fortran_env    , Only : wp => real64
   Use            :: hgauss_old_module  , Only : hgauss_old_coeffs
+  Use            :: hgauss_module      , Only : hgauss_coeffs
   
   Implicit None
 
-  Integer, Parameter :: l_max = 10
+  Integer, Parameter :: l_max = 20
 
-  Type( hgauss_old_coeffs ) :: HEij
+  Type( hgauss_old_coeffs ) :: HEij_old
+  Type( hgauss_coeffs ) :: HEij
   
   Real( wp ), Dimension( 0:2 * l_max, 0:2 * l_max, 0: 2 * l_max ) :: Eij
 
@@ -26,7 +28,7 @@ Program hermite_test
   Integer :: l1, l2, L
   Integer :: t
 
-  Character( Len = * ), Parameter :: format = '( f5.2, 4( 1x, f10.6 ), 2( 1x, g16.8 ) )'
+!!$  Character( Len = * ), Parameter :: format = '( f5.2, 4( 1x, f10.6 ), 2( 1x, g16.8 ) )'
 
   Write( *, * ) 'l1, l2 ?'
   Read ( *, * ) l1, l2
@@ -57,7 +59,7 @@ Program hermite_test
      max_error = Max( error, max_error )
      rel_error = Merge( error / Abs( g1 * g2 ), 0.0_wp, error > 1e-15_wp )
      max_rel_error = Max( rel_error, max_rel_error )
-     Write( *, format ) x, g1, g2, g1 * g2, gp, error, rel_error
+!!$     Write( *, format ) x, g1, g2, g1 * g2, gp, error, rel_error
      x = x + dx
   End Do
   Write( *, * ) max_error, max_rel_error
@@ -84,15 +86,37 @@ Program hermite_test
      max_error = Max( error, max_error )
      rel_error = Merge( error / Abs( g1 * g2 ), 0.0_wp, error > 1e-15_wp )
      max_rel_error = Max( rel_error, max_rel_error )
-     Write( *, format ) x, g1, g2, g1 * g2, gp, error, rel_error
+!!$     Write( *, format ) x, g1, g2, g1 * g2, gp, error, rel_error
      x = x + dx
   End Do
   Write( *, * ) max_error, max_rel_error
 
-  Write( *, '( 100( g12.4, 1x ) )' ) Eij( l1, l2, : )
+!!$  Write( *, '( 100( g12.4, 1x ) )' ) Eij( l1, l2, 0:l1 + l2 )
 
   Write( *, * ) 'Method 3'
-  Call HEij%allocate( l1, l2, .True. )
+  Call HEij_old%allocate( l1, l2, .True. )
+  Call HEij_old%calc_coeffs( l1, l2, a1, a2, x1, x2 )
+  L = l1 + l2
+  x = -5.0_wp
+  max_error = - Huge( max_error )
+  max_rel_error = - Huge( max_rel_error )
+  Do While( x <= 5.0_wp )
+     xl1 = ( x - x1 ) ** l1
+     xl2 = ( x - x2 ) ** l2
+     g1 = xl1 * Exp( - a1 * ( x - x1 ) * ( x - x1 ) )
+     g2 = xl2 * Exp( - a2 * ( x - x2 ) * ( x - x2 ) )
+     gp = HEij_old%calc_product( l1, l2, a1, a2, x1, x2, x )
+     error = Abs( g1 * g2 - gp )
+     max_error = Max( error, max_error )
+     rel_error = Merge( error / Abs( g1 * g2 ), 0.0_wp, error > 1e-15_wp )
+     max_rel_error = Max( rel_error, max_rel_error )
+!!$     Write( *, format ) x, g1, g2, g1 * g2, gp, error, rel_error
+     x = x + dx
+  End Do
+  Write( *, * ) max_error, max_rel_error
+
+  Write( *, * ) 'Method 4'
+  Call HEij%allocate( l1 + l2, .True. )
   Call HEij%calc_coeffs( l1, l2, a1, a2, x1, x2 )
   L = l1 + l2
   x = -5.0_wp
@@ -103,12 +127,12 @@ Program hermite_test
      xl2 = ( x - x2 ) ** l2
      g1 = xl1 * Exp( - a1 * ( x - x1 ) * ( x - x1 ) )
      g2 = xl2 * Exp( - a2 * ( x - x2 ) * ( x - x2 ) )
-     gp = HEij%calc_product( l1, l2, a1, a2, x1, x2, x )
+     gp = HEij%calc_product( l1, l2, x1, x2, x )
      error = Abs( g1 * g2 - gp )
      max_error = Max( error, max_error )
      rel_error = Merge( error / Abs( g1 * g2 ), 0.0_wp, error > 1e-15_wp )
      max_rel_error = Max( rel_error, max_rel_error )
-     Write( *, format ) x, g1, g2, g1 * g2, gp, error, rel_error
+!!$     Write( *, format ) x, g1, g2, g1 * g2, gp, error, rel_error
      x = x + dx
   End Do
   Write( *, * ) max_error, max_rel_error
@@ -118,8 +142,10 @@ Contains
   Pure Subroutine calc_hermite_expansion_coeffs( l1, l2, a1, a2, x1, x2, Eij )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
-    Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_quiet_nan
-    
+    Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_support_nan, ieee_signaling_nan, &
+         ieee_support_halting, ieee_get_halting_mode, ieee_set_halting_mode,                    &
+         ieee_get_flag, ieee_set_flag, ieee_invalid
+     
     Implicit None
 
     Integer                            , Intent( In    ) :: l1
@@ -138,6 +164,8 @@ Contains
     Integer :: i, j, t
     Integer :: ip1, jp1
     
+    Logical :: is_halting, is_invalid
+
     p = a1 + a2
     q = a1 * a2 / ( a1 + a2 )
 
@@ -145,7 +173,32 @@ Contains
     Kab = Exp( - q * xq * xq )
 
 !!$    Eij( 0:l1, 0:l2, 0:l1 + l2 ) = Huge( Eij )
-    Eij = ieee_value( Eij, ieee_quiet_nan )
+!!$    Eij = ieee_value( Eij, ieee_quiet_nan )
+    Eij = Huge( Eij )
+    If( ieee_support_nan( Eij ) .And. ieee_support_halting( ieee_invalid ) ) Then
+
+       ! This processor supports ieee maths and control of halting - Use this as carefully as possible to initialise
+       ! matrix type objects to a value that can help detect their use when unitilised - namely a ignalling NaN
+       ! First get the current halting mode for ieee invalid 
+       Call ieee_get_halting_mode( ieee_invalid, is_halting )
+       
+       ! Now deliberately turn halting off
+       Call ieee_set_halting_mode( ieee_invalid, .False. )
+
+       ! Get the current value of the invalid flag to avoid spurious signalling caused by the below
+       Call ieee_get_flag( ieee_invalid, is_invalid )
+
+       ! Now can set the data to signalling NaN without worry of stopping the program
+       Eij = ieee_value( Eij, ieee_signaling_nan )
+
+       ! Reset the invalid flag to what it was before we deliberatley used a signalling NaN to avoid missing ones later
+       Call ieee_set_flag( ieee_invalid, is_invalid )
+
+       ! And reset the halting mode
+       Call ieee_set_halting_mode( ieee_invalid, is_halting )
+
+    End If
+    
 
     ! Start off manually
     ! L = l1 + l2 = 0
