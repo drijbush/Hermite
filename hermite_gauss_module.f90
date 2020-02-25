@@ -27,6 +27,8 @@ Module hgauss_module
 
   Private
 
+  Logical, Parameter, Private :: do_debug = .True.
+  
 Contains
 
   Pure Subroutine hgauss_alloc( Eij, L_max, do_init_with_NaNs )
@@ -42,12 +44,14 @@ Contains
     ! if the passed var
     Call with_dealloc( Eij, L_max )
 
-    If( Present( do_init_with_NaNs ) ) Then
-      Do l2 = 0, L_max
-         Do l1 = 0, L_max
-            Call init_with_NaNs( Eij%coeffs( l1, l2 )%t_data )
-         End Do
-      End Do
+    If( Present( do_init_with_NaNs ) .And. do_debug ) Then
+       If( do_init_with_NaNs ) Then
+          Do l2 = 0, L_max
+             Do l1 = 0, L_max
+                Call init_with_NaNs( Eij%coeffs( l1, l2 )%t_data )
+             End Do
+          End Do
+       End If
     End If
 
   Contains
@@ -142,7 +146,7 @@ Contains
        Call hgauss_calc_coeffs_default( l1, l2, a1, a2, xq, Eij )
     End Select Angular_momentum
 
-    If( Present( do_init_with_NaNs ) ) Then
+    If( Present( do_init_with_NaNs ) .And. do_debug ) Then
        If( do_init_with_NaNs ) Then
           Do lj = l2 + 1, Ubound( Eij%coeffs, Dim = 2 )
              Do li = l1 + 1, Ubound( Eij%coeffs, Dim = 1 )
