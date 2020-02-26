@@ -394,7 +394,7 @@ Contains
                                              qxq_over_a1 * Eij%coeffs( i, 0 )%t_data( t     ) 
 
          t = L
-         Eij%coeffs( ip1, 0 )%t_data( t ) =        pfac * Eij%coeffs( i, 0 )%t_data( t - 1 )
+         Eij%coeffs( ip1, 0 )%t_data( t ) =         pfac * Eij%coeffs( i, 0 )%t_data( t - 1 )
 
       End Do
 
