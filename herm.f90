@@ -7,13 +7,17 @@ Program hermite_test
   Implicit None
 
   Integer, Parameter :: l_max = 20
-
+  Integer, Parameter :: n_quad = 20000
+  
   Type( hgauss_old_coeffs ) :: HEij_old
   Type( hgauss_coeffs ) :: HEij
   
   Real( wp ), Dimension( 0:2 * l_max, 0:2 * l_max, 0: 2 * l_max ) :: Eij
 
   Real( wp ), Dimension( 0:2 * l_max ) :: H, H_prime
+
+  Real( wp ), Dimension( 0:4 ) :: mpole
+  Real( wp ), Dimension( 0:4 ) :: quad
   
   Real( wp ) :: a1, a2
   Real( wp ) :: x1, x2
@@ -24,8 +28,10 @@ Program hermite_test
   Real( wp ) :: rel_error, max_rel_error
   Real( wp ) :: x, dx = 0.1_wp
   Real( wp ) :: xl1, xl2
-
+  Real( wp ) :: xc
+  
   Integer :: l1, l2, L
+  Integer :: top
   Integer :: t
 
 !!$  Character( Len = * ), Parameter :: format = '( f5.2, 4( 1x, f10.6 ), 2( 1x, g16.8 ) )'
@@ -137,6 +143,30 @@ Program hermite_test
   End Do
   Write( *, * ) max_error, max_rel_error
 
+  L = l1 + l2
+  top = Min( L, Ubound( mpole, Dim = 1 ) )
+  Call HEij%allocate( l1 + l2, .True. )
+  Call HEij%calc_coeffs( l1, l2, a1, a2, x1 - x2, .True. )
+  xc = 0.0_wp
+  Call HEij%calc_mpoles( l1, l2, x1, x2, top, xc, mpole )
+  Write( *, * ) 'mpole: ', mpole( 0:top )
+  x = -100.0_wp
+  quad = 0.0_wp
+  Do While( x <= 100.0_wp )
+     xl1 = ( x - x1 ) ** l1
+     xl2 = ( x - x2 ) ** l2
+     g1 = xl1 * Exp( - a1 * ( x - x1 ) * ( x - x1 ) )
+     g2 = xl2 * Exp( - a2 * ( x - x2 ) * ( x - x2 ) )
+     gp = g1 * g2
+     Do t = 0, top
+        quad( t ) = quad( t ) + gp * ( ( x - xc ) ** t )
+     End Do
+     x = x + dx / n_quad
+  End Do
+  quad = quad * dx / n_quad
+  Write( *, * ) 'quad : ', quad ( 0:top )
+  Write( *, * ) 'Diff : ', mpole( 0:top ) - quad( 0:top )
+  
 Contains
 
   Pure Subroutine calc_hermite_expansion_coeffs( l1, l2, a1, a2, x1, x2, Eij )

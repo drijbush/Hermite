@@ -23,15 +23,19 @@ Module hgauss_module
      Procedure, Public :: allocate     => hgauss_alloc
      Procedure, Public :: calc_product => hgauss_calc_product
      Procedure, Public :: calc_coeffs  => hgauss_calc_coeffs
+     Procedure, Public :: calc_mpoles  => hgauss_calc_mpole_integrals
   End Type hgauss_coeffs
 
   Private
+
+  ! Stupidly large value of L for buffers
+  Integer, Parameter :: L_absolute_max = 200
 
   Logical, Parameter, Private :: do_debug = .True.
   
 Contains
 
-  Pure Subroutine hgauss_alloc( Eij, L_max, do_init_with_NaNs )
+  Subroutine hgauss_alloc( Eij, L_max, do_init_with_NaNs )
 
     Implicit None
     
@@ -58,7 +62,7 @@ Contains
 
   Contains
 
-    Pure Subroutine with_dealloc( Eij, L_max )
+    Subroutine with_dealloc( Eij, L_max )
 
       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -85,7 +89,7 @@ Contains
 
   End Subroutine hgauss_alloc
 
-  Pure Subroutine hgauss_calc_coeffs( Eij, l1, l2, a1, a2, x12, do_init_with_NaNs )
+  Subroutine hgauss_calc_coeffs( Eij, l1, l2, a1, a2, x12, do_init_with_NaNs )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -162,7 +166,7 @@ Contains
 
   Contains
 
-    Pure Subroutine hgauss_calc_coeffs_0_1( a1, a2, xq, Eij )
+    Subroutine hgauss_calc_coeffs_0_1( a1, a2, xq, Eij )
 
       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -190,7 +194,7 @@ Contains
 
     End Subroutine hgauss_calc_coeffs_0_1
 
-    Pure Subroutine hgauss_calc_coeffs_1_0( a1, a2, xq, Eij )
+    Subroutine hgauss_calc_coeffs_1_0( a1, a2, xq, Eij )
 
       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -218,7 +222,7 @@ Contains
 
     End Subroutine hgauss_calc_coeffs_1_0
 
-    Pure Subroutine hgauss_calc_coeffs_0_2( a1, a2, xq, Eij )
+    Subroutine hgauss_calc_coeffs_0_2( a1, a2, xq, Eij )
 
       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -252,7 +256,7 @@ Contains
       
     End Subroutine hgauss_calc_coeffs_0_2
 
-    Pure Subroutine hgauss_calc_coeffs_1_1( a1, a2, xq, Eij )
+    Subroutine hgauss_calc_coeffs_1_1( a1, a2, xq, Eij )
 
       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -291,7 +295,7 @@ Contains
 
     End Subroutine hgauss_calc_coeffs_1_1
 
-    Pure Subroutine hgauss_calc_coeffs_2_0( a1, a2, xq, Eij )
+    Subroutine hgauss_calc_coeffs_2_0( a1, a2, xq, Eij )
 
       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -325,7 +329,7 @@ Contains
       
     End Subroutine hgauss_calc_coeffs_2_0
 
-    Pure Subroutine hgauss_calc_coeffs_default( l1, l2, a1, a2, xq, Eij )
+    Subroutine hgauss_calc_coeffs_default( l1, l2, a1, a2, xq, Eij )
 
       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -455,7 +459,7 @@ Contains
     
   End Subroutine hgauss_calc_coeffs
 
-  Pure Function hgauss_calc_product( Eij, l1, l2, x1, x2, x ) Result( gp )
+  Function hgauss_calc_product( Eij, l1, l2, x1, x2, x ) Result( gp )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -469,9 +473,6 @@ Contains
     Real( wp )            , Intent( In ) :: x1
     Real( wp )            , Intent( In ) :: x2
     Real( wp )            , Intent( In ) :: x
-
-    ! Stupidly large value of L for buffers
-    Integer, Parameter :: L_absolute_max = 2000
 
     Real( wp ), Dimension( 0:L_absolute_max ) :: Hermite
     Real( wp ), Dimension( 0:L_absolute_max ) :: Hermite_prime
@@ -503,7 +504,63 @@ Contains
     
   End Function hgauss_calc_product
 
-  Pure Subroutine init_with_NaNs( data )
+  Subroutine hgauss_calc_mpole_integrals( Eij, l1, l2, x1, x2, max_order, xc, S )
+
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+    Implicit None
+
+    Class( hgauss_coeffs )     , Intent( In    ) :: Eij
+    Integer                    , Intent( In    ) :: l1
+    Integer                    , Intent( In    ) :: l2
+    Real( wp )                 , Intent( In    ) :: x1
+    Real( wp )                 , Intent( In    ) :: x2
+    Integer                    , Intent( In    ) :: max_order
+    Real( wp )                 , Intent( In    ) :: xc
+    Real( wp ), Dimension( 0: ), Intent(   Out ) :: S
+
+    Real( wp ), Dimension( 0:L_absolute_max, 1:2 ) :: Mt
+
+    Real( wp ) :: p, xp, pfac
+    Real( wp ) :: xpc
+    
+    Integer :: order, e
+    Integer :: t
+    Integer :: top
+    Integer :: lo, hi
+
+    p  = Eij%p
+    xp = ( Eij%a1 * x1 + Eij%a2 * x2 ) / p
+    pfac = 0.5_wp / p
+
+    xpc = xp - xc
+
+    lo = 1
+    Mt( 0, lo ) = Sqrt( 3.14159265358979323846_wp / Eij%p )
+    
+    S ( 0 ) = Eij%coeffs( l1, l2 )%t_data( 0 ) * Mt( 0, lo )
+    
+    Do order = 0, max_order - 1
+       hi = 3 - lo
+       e = order
+       top = Min( e + 1, l1 + l2 )
+       Mt( 0, hi ) = xpc * Mt( 0, lo ) 
+       Do t = 1, top
+          Mt( t, hi ) = t * Mt( t - 1, lo )
+       End Do
+       Do t = 1, Min( top, e )
+          Mt( t, hi ) = Mt( t, hi ) + xpc * Mt( t, lo )
+       End Do
+       Do t = 0, Min( top - 1, e - 1 )
+          Mt( t, hi ) = Mt( t, hi ) + pfac * Mt( t + 1, lo )
+       End Do
+       S( e + 1 ) = Sum( Eij%coeffs( l1, l2 )%t_data( 0:top ) * Mt( 0:top, hi ) )
+       lo = hi
+    End Do
+
+  End Subroutine hgauss_calc_mpole_integrals
+
+  Subroutine init_with_NaNs( data )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
     Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_support_nan, ieee_signaling_nan, &
@@ -547,7 +604,7 @@ Contains
     
   End Subroutine init_with_NaNs
 
-  Pure Subroutine Hermite_polynomial( x, H, H_prime )
+  Subroutine Hermite_polynomial( x, H, H_prime )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
