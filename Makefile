@@ -10,7 +10,7 @@ CC = cc
 CFLAGS = -O
 FC = f77
 FFLAGS = -O
-F90 = gfortran-8
+F90 = gfortran-10
 F90FLAGS = -O -g -std=f2008 -Wall -Wextra -fcheck=all -finit-real=snan -fopenmp -ffpe-trap=zero,overflow,invalid
 LDFLAGS = 
 

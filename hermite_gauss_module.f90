@@ -32,6 +32,8 @@ Module hgauss_module
 Contains
 
   Pure Subroutine hgauss_alloc( Eij, L_max, do_init_with_NaNs )
+
+    Implicit None
     
     Class( hgauss_coeffs ), Intent( InOut )           :: Eij
     Integer               , Intent( In    )           :: L_max
@@ -59,6 +61,8 @@ Contains
     Pure Subroutine with_dealloc( Eij, L_max )
 
       Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+      Implicit None
 
       Type( hgauss_coeffs ), Intent(   Out ) :: Eij
       Integer              , Intent( In    ) :: L_max
