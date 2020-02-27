@@ -20,17 +20,21 @@ Module hgauss_module
      Real( wp )                                         , Private :: x12
      Type( coeff_array ), Dimension( :, : ), Allocatable, Private :: coeffs
    Contains
-     Procedure, Public :: allocate     => hgauss_alloc
-     Procedure, Public :: calc_product => hgauss_calc_product
-     Procedure, Public :: calc_coeffs  => hgauss_calc_coeffs
-     Procedure, Public :: calc_mpoles  => hgauss_calc_mpole_integrals
+     Procedure, Public  :: allocate     => hgauss_alloc
+     Procedure, Public  :: calc_product => hgauss_calc_product
+     Procedure, Public  :: calc_coeffs  => hgauss_calc_coeffs
+     Generic  , Public  :: calc_mpoles  => hgauss_calc_mpole_integrals_one, hgauss_calc_mpole_integrals_multi_l
+     Generic  , Public  :: calc_derivs  => hgauss_calc_deriv_integrals_multi_l
+     Procedure, Private :: hgauss_calc_mpole_integrals_one, hgauss_calc_mpole_integrals_multi_l
+     Procedure, Private :: hgauss_calc_deriv_integrals_multi_l
   End Type hgauss_coeffs
-
+  
   Private
 
-  ! Stupidly large value of L for buffers
-  Integer, Parameter :: L_absolute_max = 200
-
+  ! Stupidly large value of L and order of derivs etc. for buffers
+  Integer, Parameter :: L_absolute_max   = 50
+  Integer, Parameter :: ord_absolute_max = 20
+  
   Logical, Parameter, Private :: do_debug = .True.
   
 Contains
@@ -504,7 +508,7 @@ Contains
     
   End Function hgauss_calc_product
 
-  Subroutine hgauss_calc_mpole_integrals( Eij, l1, l2, x1, x2, max_order, xc, S )
+  Subroutine hgauss_calc_mpole_integrals_one( Eij, l1, l2, x1, x2, max_order, xc, S )
 
     Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
 
@@ -538,7 +542,7 @@ Contains
     lo = 1
     Mt( 0, lo ) = Sqrt( 3.14159265358979323846_wp / Eij%p )
     
-    S ( 0 ) = Eij%coeffs( l1, l2 )%t_data( 0 ) * Mt( 0, lo )
+    S( 0 ) = Eij%coeffs( l1, l2 )%t_data( 0 ) * Mt( 0, lo )
     
     Do order = 0, max_order - 1
        hi = 3 - lo
@@ -558,11 +562,130 @@ Contains
        lo = hi
     End Do
 
-  End Subroutine hgauss_calc_mpole_integrals
+  End Subroutine hgauss_calc_mpole_integrals_one
+
+  Subroutine hgauss_calc_mpole_integrals_multi_l( Eij, l1_i, l1_lo, l1_hi, &
+       l2_i, l2_lo, l2_hi, x1, x2, max_order, xc, S )
+
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+    Implicit None
+
+    Class( hgauss_coeffs )                   , Intent( In    ) :: Eij
+    Integer                                  , Intent( In    ) :: l1_i, l1_lo, l1_hi
+    Integer                                  , Intent( In    ) :: l2_i, l2_lo, l2_hi
+    Real( wp )                               , Intent( In    ) :: x1
+    Real( wp )                               , Intent( In    ) :: x2
+    Integer                                  , Intent( In    ) :: max_order
+    Real( wp )                               , Intent( In    ) :: xc
+    Real( wp ), Dimension( 0:, l1_i:, l2_i: ), Intent(   Out ) :: S
+
+    Real( wp ), Dimension( 0:L_absolute_max, 1:2 ) :: Mt
+
+    Real( wp ) :: p, xp, pfac
+    Real( wp ) :: xpc
+    
+    Integer :: order, e
+    Integer :: t
+    Integer :: top
+    Integer :: lo, hi
+    Integer :: l1, l2
+
+    p  = Eij%p
+    xp = ( Eij%a1 * x1 + Eij%a2 * x2 ) / p
+    pfac = 0.5_wp / p
+
+    xpc = xp - xc
+
+    Do l2 = l2_lo, l2_hi
+       Do l1 = l1_lo, l1_hi
+          
+          lo = 1
+          Mt( 0, lo ) = Sqrt( 3.14159265358979323846_wp / Eij%p )
+    
+          S( 0, l1, l2 ) = Eij%coeffs( l1, l2 )%t_data( 0 ) * Mt( 0, lo )
+    
+          Do order = 0, max_order - 1
+             hi = 3 - lo
+             e = order
+             top = Min( e + 1, l1 + l2 )
+             Mt( 0, hi ) = xpc * Mt( 0, lo ) 
+             Do t = 1, top
+                Mt( t, hi ) = t * Mt( t - 1, lo )
+             End Do
+             Do t = 1, Min( top, e )
+                Mt( t, hi ) = Mt( t, hi ) + xpc * Mt( t, lo )
+             End Do
+             Do t = 0, Min( top - 1, e - 1 )
+                Mt( t, hi ) = Mt( t, hi ) + pfac * Mt( t + 1, lo )
+             End Do
+             S( e + 1, l1, l2 ) = Sum( Eij%coeffs( l1, l2 )%t_data( 0:top ) * Mt( 0:top, hi ) )
+             lo = hi
+          End Do
+
+       End Do
+    End Do
+          
+  End Subroutine hgauss_calc_mpole_integrals_multi_l
+
+  Subroutine hgauss_calc_deriv_integrals_multi_l( Eij, l1_i, l1_lo, l1_hi, &
+       l2_i, l2_lo, l2_hi, x1, x2, max_order, D )
+
+    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+
+    Implicit None
+
+    Class( hgauss_coeffs )                   , Intent( In    ) :: Eij
+    Integer                                  , Intent( In    ) :: l1_i, l1_lo, l1_hi
+    Integer                                  , Intent( In    ) :: l2_i, l2_lo, l2_hi
+    Real( wp )                               , Intent( In    ) :: x1
+    Real( wp )                               , Intent( In    ) :: x2
+    Integer                                  , Intent( In    ) :: max_order
+    Real( wp ), Dimension( 0:, l1_i:, l2_i: ), Intent(   Out ) :: D
+
+    Real( wp ), Dimension( 0:0               , 0:L_absolute_max, 0:L_absolute_max ) :: S
+    Real( wp ), Dimension( 0:ord_absolute_max, 0:L_absolute_max, 0:L_absolute_max ) :: D_temp
+
+    Real( wp ) :: bfac
+
+    Integer :: order, q
+    Integer :: l1, l2
+
+    ! xc doesn't matter here as only doing order 0 (overlap) integrals)
+    Call Eij%calc_mpoles( Lbound( S, Dim = 2 ), l1_lo, l1_hi, Lbound( S, Dim = 3 ), l2_lo, l2_hi + 1, x1, x2, max_order, 0.0_wp, S )
+
+    bfac = 0.5_wp * Eij%a2
+
+    Do l2 = l2_lo, l2_hi + 1
+       Do l1 = l1_lo, l1_hi
+          D_temp( 0, l1, l2 ) = S( 0, l1, l2 )
+       End Do
+    End Do
+    
+    If( l2_lo == 0 ) Then
+       Do l1 = l1_lo, l1_hi
+          Do order = 0, max_order - 1
+             q = order
+             D_temp( q + 1, l1, 0 ) = - bfac * D_temp( q, l1, 1 )
+          End Do
+       End Do
+    End If
+    Do l2 = Max( 1, l2_lo ), l2_hi + 1
+       Do l1 = l1_lo, l1_hi
+          Do order = 1, max_order - 1
+             q = order
+             D_temp( q + 1, l1, l2 ) = l2 * D_temp( q, l1, l2 - 1 ) - bfac * D_temp( q, l1, l2 + 1 )
+          End Do
+       End Do
+    End Do
+          
+    D( 0:max_order, l1_lo:l1_hi, l2_lo:l2_hi ) = D_temp( 0:max_order, l1_lo:l1_hi, l2_lo:l2_hi )
+
+  End Subroutine hgauss_calc_deriv_integrals_multi_l
 
   Subroutine init_with_NaNs( data )
 
-    Use, Intrinsic :: iso_fortran_env, Only :  wp => real64
+    Use, Intrinsic :: iso_fortran_env, Only : wp => real64
     Use, Intrinsic :: ieee_arithmetic, Only : ieee_value, ieee_support_nan, ieee_signaling_nan, &
          ieee_support_halting, ieee_get_halting_mode, ieee_set_halting_mode,                    &
          ieee_get_flag, ieee_set_flag, ieee_invalid
