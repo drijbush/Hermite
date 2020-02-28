@@ -652,10 +652,12 @@ Contains
     Integer :: l1, l2
 
     ! xc doesn't matter here as only doing order 0 (overlap) integrals)
-    Call Eij%calc_mpoles( Lbound( S, Dim = 2 ), l1_lo, l1_hi, Lbound( S, Dim = 3 ), l2_lo, l2_hi + 1, x1, x2, max_order, 0.0_wp, S )
+    Call Eij%calc_mpoles( Lbound( S, Dim = 2 ), l1_lo, l1_hi, Lbound( S, Dim = 3 ), l2_lo, l2_hi + max_order, x1, x2, max_order, 0.0_wp, S )
 
     bfac = 0.5_wp * Eij%a2
 
+    ! THIS IS PROBABLY RUBBISH!
+    
     Do l2 = l2_lo, l2_hi + 1
        Do l1 = l1_lo, l1_hi
           D_temp( 0, l1, l2 ) = S( 0, l1, l2 )
@@ -670,7 +672,7 @@ Contains
           End Do
        End Do
     End If
-    Do l2 = Max( 1, l2_lo ), l2_hi + 1
+    Do l2 = Max( 1, l2_lo ), l2_hi + max_order
        Do l1 = l1_lo, l1_hi
           Do order = 1, max_order - 1
              q = order
